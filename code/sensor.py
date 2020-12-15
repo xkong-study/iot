@@ -52,9 +52,11 @@ class sensor:
                 if sensorType == 'speed':
                     d = sensorType + " " + str(random.randint(40, 90))
                 elif sensorType == 'proximity':
-                    d = sensorType + " " + str(random.randint(1, 10))
+                    d = sensorType + " " + str(random.randint(1, 50))
                 elif sensorType == 'pressure':
-                    d = sensorType + " " + str(random.randint(10, 20))
+                    d = sensorType + " " + str(random.randint(20, 40))
+                elif sensorType == 'heartrate':
+                    d = sensorType + " " + str(random.randint(40, 120))
                 data.messages.append(d.encode('utf-8'))
             if data.out_bytes:
                 print(data.out_bytes.decode('utf-8'))
