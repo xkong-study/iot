@@ -96,7 +96,7 @@ class Peer:
             if command == 'HOST':
                 hostname = dataMessage[1]
                 port = int(dataMessage[3])
-                if hostname!= myhostname and hostname not in self.peers.keys() and port not in self.peers.values() :
+                if hostname!= myhostname and hostname not in self.peers.keys():
                     self.peers[hostname] = port
             print(self.peers)
             time.sleep(10)
