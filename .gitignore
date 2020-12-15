@@ -1,5 +1,7 @@
 # Python virtual environment
 .venv/
+# Flask cache
+__pycache__/
 
 # macOS
 .DS_Store
