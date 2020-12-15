@@ -25,24 +25,31 @@ class Peer:
         sock = key.fileobj
         data = key.data
         if mask & selectors.EVENT_READ:
-            recv_data = sock.recv(8000)
-            if recv_data:
-                data.out_bytes += recv_data
-                data1 = recv_data.decode('utf-8')
-                print(data1)
-                value = int(data1.split(' ')[1])
-                sensortype = data1.split(' ')[0]
-                if sensortype == 'speed':
-                    if value >= 80 :
-                        self.sendData("overspeeding",'ALERT')
-                elif sensortype == 'proximity':
-                    if value >= 9 :
-                        self.sendData("stopping",'ALERT')
-                elif sensortype == 'pressure':
-                    if value >= 18 :
-                        self.sendData("Tyre issue",'ALERT')
-            else:
-                print("Closing connection to: ", data.addr)
+            try:
+                recv_data = sock.recv(8000)
+                if recv_data:
+                    data.out_bytes += recv_data
+                    data1 = recv_data.decode('utf-8')
+                    print(data1)
+                    value = int(data1.split(' ')[1])
+                    sensortype = data1.split(' ')[0]
+                    if sensortype == 'speed':
+                        if value >= 80 :
+                            self.sendData("overspeeding",'ALERT')
+                    elif sensortype == 'proximity':
+                        if value <= 5 :
+                            self.sendData("closeby to you",'ALERT')
+                    elif sensortype == 'pressure':
+                        if value <= 25 :
+                            self.sendData("Tyre issue",'ALERT')
+                    elif sensortype == 'heartrate':
+                        if value <= 60 or value>=100 :
+                            self.sendData("Heart rate ",'ALERT')
+                else:
+                    print("Closing connection to: ", data.addr)
+                    selector.unregister(sock)
+                    sock.close()
+            except:
                 selector.unregister(sock)
                 sock.close()
                        
