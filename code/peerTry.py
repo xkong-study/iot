@@ -9,7 +9,7 @@ hostname = socket.gethostname()
 myhostname = socket.gethostbyname(hostname)
 
 port = 33301 #port which this instance will be listening on to other peers
-portForSensor = 33401 #port which this instance will be listening to sensor1
+portForSensor = 33401 #port which this instance will be listening to sensors
             
 class Peer:
 
@@ -28,9 +28,19 @@ class Peer:
             recv_data = sock.recv(8000)
             if recv_data:
                 data.out_bytes += recv_data
-                data1 = int(recv_data.decode('utf-8'))
-                if data1 >= 6 :
-                    self.sendData(str(data1),'ALERT'); 
+                data1 = recv_data.decode('utf-8')
+                print(data1)
+                value = int(data1.split(' ')[1])
+                sensortype = data1.split(' ')[0]
+                if sensortype == 'speed':
+                    if value >= 80 :
+                        self.sendData("overspeeding",'ALERT')
+                elif sensortype == 'proximity':
+                    if value >= 9 :
+                        self.sendData("stopping",'ALERT')
+                elif sensortype == 'pressure':
+                    if value >= 18 :
+                        self.sendData("Tyre issue",'ALERT')
             else:
                 print("Closing connection to: ", data.addr)
                 selector.unregister(sock)
@@ -38,9 +48,10 @@ class Peer:
                        
         if mask & selectors.EVENT_WRITE:
             if data.out_bytes:
-                print("Echoing", repr(data.out_bytes), "to", data.addr)
+                #print("Echoing", repr(data.out_bytes), "to", data.addr)
                 sent = sock.send(data.out_bytes)
                 data.out_bytes = data.out_bytes[sent:]
+                
     def listentosensor(self):
         selector = selectors.DefaultSelector()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -85,21 +96,45 @@ class Peer:
             if command == 'HOST':
                 hostname = dataMessage[1]
                 port = int(dataMessage[3])
-                if hostname!= myhostname and hostname not in self.peers.keys() and port not in self.peers.values() :
+                if hostname!= myhostname and hostname not in self.peers.keys():
                     self.peers[hostname] = port
             print(self.peers)
             time.sleep(10)
 
+    #check active peers
+    def activePeers(self):
+        while True:
+            delList = []
+            for hostname in self.peers.keys():
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.connect((hostname,self.peers[hostname]))
+                    s.send(str.encode("PING"))
+                    s.close()
+                except:
+                    delList.append(hostname)
+            for hostname in delList:
+                print('peer removed')
+                self.peers.pop(hostname,None)
+            time.sleep(5)
+
     #Send data to all the peers
     def sendData(self,data, command):
+        delList = []
         if command == 'ALERT':
             for hostname in self.peers.keys():
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect((hostname,self.peers[hostname]))
-                s.send(str.encode("ALERT from " + myhostname + " sensor value " + data))
-                print("Data sent to %s"%hostname)
-                s.close()
-            print("Alert sent to known peers");
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.connect((hostname,self.peers[hostname]))
+                    s.send(str.encode("ALERT from " + myhostname + ", vehicle is " + data))
+                    #print("Data sent to %s"%hostname)
+                    s.close()
+                except:
+                    delList.append(hostname)
+        for hostname in delList:
+            print('peer removed')
+            self.peers.pop(hostname,None)
+        print("Alert sent to known peers");
 
     #Listen in your port for other peers
     def receiveData(self,port):
@@ -110,7 +145,8 @@ class Peer:
             conn,addr = s.accept()
             data = conn.recv(1024)
             data = data.decode('utf-8')
-            print(data)
+            if data!="PING":
+                print(data)
             conn.close()
             time.sleep(1)
 
@@ -118,11 +154,13 @@ peer = Peer()
 t1 = threading.Thread(target = peer.broadcastIP,args = [port]) 
 t2 = threading.Thread(target = peer.updatePeerList)
 t3 = threading.Thread(target = peer.listentosensor)
-t4 = threading.Thread(target = peer.receiveData, args = [port]) 
+t4 = threading.Thread(target = peer.receiveData, args = [port])
+#t5 = threading.Thread(target = peer.activePeers)
 t1.start()
 t4.start()
 time.sleep(3)
 t2.start()
+#t5.start()
 t3.start()
 
 
