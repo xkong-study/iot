@@ -73,7 +73,7 @@ class sensor:
                 try:
                     self.service_connection(key, mask,sensorType)
                 except ConnectionRefusedError:
-                    print('Host node with address {Host:', HOST, ', Port:', PORT, '} not found')
+                    print('Host node with address {Host:', self.host, ', Port:', self.port, '} not found')
                     break
                 i += 1
 
