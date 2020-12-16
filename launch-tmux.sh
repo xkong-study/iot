@@ -6,7 +6,7 @@ set -o errexit
 set -o nounset
 
 usage() {
-  echo 'Usage: launch-tmux [-i]'
+  echo 'Usage: launch-tmux [-i] [-d DELAY]'
   echo
   echo 'Run V2V, V2I, and sensors in multiple tmux panes.'
   echo
