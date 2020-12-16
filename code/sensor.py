@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
-import socket
-import selectors
-import types
-import json
-import time
 import random
-hostname = socket.gethostname()
-myhostname = socket.gethostbyname(hostname)
+import selectors
+import socket
+import time
+import types
+
+
 class sensor:
     def __init__(self, host, port):
         self.host = host
@@ -80,14 +79,10 @@ class sensor:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sensortype', help='Type of sensor', type=str)
+    parser.add_argument('--sensortype', help='Type of sensor', required=True)
     args = parser.parse_args()
-    if args.sensortype is None:
-        print("Please specify the sensor type")
-        exit(1)
-    
     sensorType = args.sensortype
-    HOST = myhostname                         # The server's hostname or IP address
+
     PORT_TABLE = {'VehiclePort': 33401}         # Hardcoded port table for testing
     PORT = PORT_TABLE['VehiclePort']            # The port used by the server
 
@@ -97,11 +92,12 @@ def main():
     # data["key"] = "value"
     # json_data = json.dumps(data)
 
-    mySensor = sensor(HOST, PORT)
+    # The server's hostname or IP address
+    host = socket.gethostbyname(socket.gethostname())
+    mySensor = sensor(host, PORT)
     mySensor.start_connections(1, byte_messages)
     mySensor.run(sensorType)
 
 
 if __name__ == '__main__':
     main()
-
