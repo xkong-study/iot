@@ -24,7 +24,7 @@ while getopts ih f; do
 done
 
 . .venv/bin/activate
-if [ -z "${infra}" ]; then
+if [ -z "${infra:-}" ]; then
   tmux new 'python code/peerTry.py'                                 \; \
        splitw -h 'sleep 4; ./code/sensor.py --sensortype=speed'     \; \
        splitw    'sleep 4; ./code/sensor.py --sensortype=proximity' \; \
