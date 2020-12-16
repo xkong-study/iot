@@ -78,6 +78,7 @@ class Peer:
                     self.accept_wrapper(key.fileobj, selector)
                 else:
                     self.service_connection(key, mask, selector)
+            time.sleep(1)
 
     def broadcastIP(self):
         """Broadcast the host IP."""
