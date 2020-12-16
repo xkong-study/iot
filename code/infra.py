@@ -9,6 +9,7 @@ import requests
 
 # Standard
 import random
+import re
 import socket
 import time
 from threading import Thread
@@ -23,8 +24,13 @@ HOST_FMT = 'http://{pi}.berry.scss.tcd.ie'
 
 
 class InfraPeer(Peer):
+    # Match originating host and message of alerts
+    alert_re = re.compile(r'ALERT from ([^,]+), (.+)')
+
     def __init__(self, *args):
         super().__init__(*args)
+        self.alert_host = None
+        self.alert_msg = None
         Thread(target=self.broadcastIP).start()
         Thread(target=self.receiveData).start()
         Thread(target=self.updatePeerList).start()
@@ -36,22 +42,21 @@ class InfraPeer(Peer):
         while True:
             conn, _ = s.accept()
             data = conn.recv(1024)
+            conn.close()
             data = data.decode('utf-8')
             print('Received:', data)
-            conn.close()
+            match = self.alert_re.match(data)
+            if match:
+                self.alert_host = match.group(1)
+                self.alert_msg = match.group(2)
             time.sleep(1)
 
 
 class InfraServer(object):
     """Infrastructure for intra- and inter-pod comms."""
 
-    def __init__(self):
-        self.alert_msg = None
-        self.alert_id = None
-        self.vid = None
-        self.known = {}
-        host = socket.gethostbyname(socket.gethostname())
-        self.peer = InfraPeer(host, INFRA_PORT)
+    def __init__(self, host, port):
+        self.peer = InfraPeer(host, port)
 
     def __call__(self):
         """Implement inter-pod /sensor endpoint."""
@@ -60,10 +65,9 @@ class InfraServer(object):
             'wiper_speed': random.randint(0, 2),
             'tyre_pressure': 32.0,
             'fuel': random.uniform(20, 40),
-            'known': list(self.known.keys()),
-            'vid': self.vid,
-            'alert_id': self.alert_id,
-            'alert_msg': self.alert_msg
+            'known': list(set(host for host, _ in self.peer.peers)),
+            'alert_host': self.peer.alert_host,
+            'alert_msg': self.peer.alert_msg
         }
 
     def pod_request(self, pi):
@@ -84,7 +88,8 @@ class InfraServer(object):
 
 
 def main():
-    server = InfraServer()
+    host = socket.gethostbyname(socket.gethostname())
+    server = InfraServer(host, INFRA_PORT)
     app.add_url_rule(POD_ENDPOINT, POD_ENDPOINT[1:], server)
     app.run(host=POD_HOST, port=POD_PORT)
 
