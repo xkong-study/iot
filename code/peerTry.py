@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
+import selectors
 import socket
 import threading
 import time
-import argparse
-import selectors
 import types
 
 PEER_PORT = 33301    # Port for listening to other peers
 SENSOR_PORT = 33401  # Port for listening to other sensors
+BCAST_PORT = 33333   # Port for broadcasting own address
 
 
 class Peer:
@@ -18,15 +18,15 @@ class Peer:
         self.port = port
         self.peers = set()
 
-    def accept_wrapper(self,sock, selector):
+    def accept_wrapper(self, sock, selector):
         conn, addr = sock.accept()
-        print("Accepted connection from ", addr)
+        print("Accepted connection from", addr)
         conn.setblocking(False)
         data = types.SimpleNamespace(addr=addr, in_bytes=b'', out_bytes=b'')
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
-        selector.register(conn, events,data=data)
+        selector.register(conn, events, data=data)
 
-    def service_connection(self,key, mask, selector):
+    def service_connection(self, key, mask, selector):
         sock = key.fileobj
         data = key.data
         if mask & selectors.EVENT_READ:
@@ -35,44 +35,44 @@ class Peer:
                 if recv_data:
                     data.out_bytes += recv_data
                     data1 = recv_data.decode('utf-8')
-                    print(data1)
+                    print('Received', data1)
                     value = int(data1.split(' ')[1])
                     sensortype = data1.split(' ')[0]
                     if sensortype == 'speed':
-                        if value >= 80 :
-                            self.sendData("is overspeeding",'ALERT')
+                        if value >= 80:
+                            self.sendData("is overspeeding", 'ALERT')
                     elif sensortype == 'proximity':
-                        if value <= 5 :
-                            self.sendData("is closeby to you",'ALERT')
+                        if value <= 5:
+                            self.sendData("is closeby to you", 'ALERT')
                     elif sensortype == 'pressure':
-                        if value <= 25 :
-                            self.sendData("is having tyre issue",'ALERT')
+                        if value <= 25:
+                            self.sendData("is having tyre issue", 'ALERT')
                     elif sensortype == 'heartrate':
-                        if value <= 60 or value>=100 :
-                            self.sendData("passenger heart rate level low/high",'ALERT')
+                        if value <= 60 or value >= 100:
+                            self.sendData("passenger heart rate level low/high", 'ALERT')
                 else:
-                    print("Closing connection to: ", data.addr)
+                    print("Closing connection to:", data.addr)
                     selector.unregister(sock)
                     sock.close()
-            except:
+            except Exception:
                 selector.unregister(sock)
                 sock.close()
-                       
+
         if mask & selectors.EVENT_WRITE:
             if data.out_bytes:
-                #print("Echoing", repr(data.out_bytes), "to", data.addr)
+                # print("Echoing", repr(data.out_bytes), "to", data.addr)
                 sent = sock.send(data.out_bytes)
                 data.out_bytes = data.out_bytes[sent:]
-                
+
     def listentosensor(self):
         selector = selectors.DefaultSelector()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((self.host, SENSOR_PORT))
         print("Socket bound to Port for sensor:", SENSOR_PORT)
         sock.listen()
-        #print("Listening for connections...")
+        # print("Listening for connections...")
         sock.setblocking(False)
-        selector.register(sock, selectors.EVENT_READ, data=None)    
+        selector.register(sock, selectors.EVENT_READ, data=None)
         while True:
             events = selector.select(timeout=None)
             for key, mask in events:
@@ -84,24 +84,26 @@ class Peer:
 
     def broadcastIP(self):
         """Broadcast the host IP."""
-        server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
+                               socket.IPPROTO_UDP)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         server.settimeout(0.5)
         message = f'HOST {self.host} PORT {self.port}'.encode('utf-8')
         while True:
-            server.sendto(message, ('<broadcast>', 33333))
-            #print("host ip sent!")
+            server.sendto(message, ('<broadcast>', BCAST_PORT))
+            # print("Host IP sent!")
             time.sleep(10)
 
-    #Update the peers list from all the broadcast
     def updatePeerList(self):
-        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
+        """Update peers list on receipt of their address broadcast."""
+        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
+                               socket.IPPROTO_UDP)
         client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        client.bind(("", 33333))
+        client.bind(("", BCAST_PORT))
         while True:
-            data, addr = client.recvfrom(1024)
-            #print("received message: %s"%data)
+            data, _ = client.recvfrom(1024)
+            # print("received message:", data)
             data = data.decode('utf-8')
             dataMessage = data.split(' ')
             command = dataMessage[0]
