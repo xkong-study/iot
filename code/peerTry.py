@@ -109,7 +109,7 @@ class Peer:
                 if peer != (self.host, self.port) and peer not in self.peers:
                     self.peers.add(peer)
                     print('Known vehicles:', self.peers)
-            time.sleep(10)
+            time.sleep(2)
 
     def sendData(self, data, command):
         """Send data to all peers."""
