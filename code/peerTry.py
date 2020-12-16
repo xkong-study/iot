@@ -5,13 +5,16 @@ import argparse
 import selectors
 import types
 
-hostname = socket.gethostname()
-myhostname = socket.gethostbyname(hostname)
-
 PEER_PORT = 33301    # Port for listening to other peers
 SENSOR_PORT = 33401  # Port for listening to other sensors
 
+
 class Peer:
+
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.peers = set()
 
     def accept_wrapper(self,sock, selector):
         conn, addr = sock.accept()
@@ -62,7 +65,7 @@ class Peer:
     def listentosensor(self):
         selector = selectors.DefaultSelector()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind((myhostname, SENSOR_PORT))
+        sock.bind((self.host, SENSOR_PORT))
         print("Socket bound to Port for sensor:", SENSOR_PORT)
         sock.listen()
         #print("Listening for connections...")
@@ -75,14 +78,13 @@ class Peer:
                     self.accept_wrapper(key.fileobj, selector)
                 else:
                     self.service_connection(key, mask, selector)
-    #Broadcast the host ip 
-    def broadcastIP(self, port):
-        self.peers = {}
+
+    def broadcastIP(self):
+        """Broadcast the host IP."""
         server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         server.settimeout(0.5)
-        hostname = "HOST " + myhostname + " PORT " + str(port)
-        message = hostname.encode('utf-8')
+        message = f'HOST {self.host} PORT {self.port}'.encode('utf-8')
         while True:
             server.sendto(message, ('<broadcast>', 33333))
             #print("host ip sent!")
@@ -101,53 +103,55 @@ class Peer:
             dataMessage = data.split(' ')
             command = dataMessage[0]
             if command == 'HOST':
-                hostname = dataMessage[1]
+                host = dataMessage[1]
                 port = int(dataMessage[3])
-                if hostname!= myhostname and hostname not in self.peers.keys():
-                    self.peers[hostname] = port
+                peer = (host, port)
+                if peer != (self.host, self.port) and peer not in self.peers:
+                    self.peers.add(peer)
             print(self.peers)
             time.sleep(10)
 
-    #check active peers
     def activePeers(self):
+        """Check active peers."""
         while True:
-            delList = []
-            for hostname in self.peers.keys():
+            delset = set()
+            for peer in self.peers:
                 try:
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.connect((hostname,self.peers[hostname]))
+                    s.connect(peer)
                     s.send(str.encode("PING"))
                     s.close()
-                except:
-                    delList.append(hostname)
-            for hostname in delList:
-                print('peer removed')
-                self.peers.pop(hostname,None)
+                except Exception:
+                    delset.add(peer)
+            for peer in delset:
+                print('Removing peer:', peer)
+                self.peers.discard(peer)
             time.sleep(5)
 
-    #Send data to all the peers
-    def sendData(self,data, command):
-        delList = []
+    def sendData(self, data, command):
+        """Send data to all peers."""
+        delset = set()
         if command == 'ALERT':
-            for hostname in self.peers.keys():
+            for peer in self.peers:
                 try:
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.connect((hostname,self.peers[hostname]))
-                    s.send(str.encode("ALERT from " + myhostname + ", vehicle is " + data))
+                    s.connect(peer)
+                    msg = f'ALERT from {self.host}, vehicle is {data}'
+                    s.send(msg.encode())
                     #print("Data sent to %s"%hostname)
                     s.close()
-                except:
-                    delList.append(hostname)
-        for hostname in delList:
-            print('peer removed')
-            self.peers.pop(hostname,None)
-        print("Alert sent to known peers");
+                except Exception:
+                    delset.add(peer)
+        for peer in delset:
+            print('Removing peer:', peer)
+            self.peers.discard(peer)
+        print("Data sent to known peers")
 
-    #Listen in your port for other peers
-    def receiveData(self,port):
+    def receiveData(self):
+        """Listen on own port for other peer data."""
         while True:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind((myhostname,port))
+            s.bind((self.host, self.port))
             s.listen(5)
             conn,addr = s.accept()
             data = conn.recv(1024)
@@ -159,11 +163,13 @@ class Peer:
 
 
 def main():
-    peer = Peer()
-    t1 = threading.Thread(target=peer.broadcastIP, args=[PEER_PORT])
+    hostname = socket.gethostname()
+    host = socket.gethostbyname(hostname)
+    peer = Peer(host, PEER_PORT)
+    t1 = threading.Thread(target=peer.broadcastIP)
     t2 = threading.Thread(target=peer.updatePeerList)
     t3 = threading.Thread(target=peer.listentosensor)
-    t4 = threading.Thread(target=peer.receiveData, args=[PEER_PORT])
+    t4 = threading.Thread(target=peer.receiveData)
     #t5 = threading.Thread(target = peer.activePeers)
     t1.start()
     t4.start()

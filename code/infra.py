@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Ours
-from peerTry import Peer, PEER_PORT
+from peerTry import Peer
 
 # Theirs
 from flask import Flask
@@ -15,6 +15,7 @@ from threading import Thread
 
 # Globals
 app = Flask(__name__)
+INFRA_PORT = 33501
 POD_PORT = 33033
 POD_HOST = '0.0.0.0'
 POD_ENDPOINT = '/sensor'
@@ -22,21 +23,22 @@ HOST_FMT = 'http://{pi}.berry.scss.tcd.ie'
 
 
 class InfraPeer(Peer):
-    def __init__(self, port):
+    def __init__(self, *args):
+        super().__init__(*args)
         self.host = socket.gethostbyname(socket.gethostname())
-        Thread(target=self.broadcastIP, args=[port]).start()
-        Thread(target=self.receiveData, args=[port]).start()
+        Thread(target=self.broadcastIP).start()
+        Thread(target=self.receiveData).start()
         Thread(target=self.updatePeerList).start()
 
-    def receiveData(self, port):
+    def receiveData(self):
         while True:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind((self.host, port))
+            s.bind((self.host, self.port))
             s.listen(5)
-            conn, addr = s.accept()
+            conn, _ = s.accept()
             data = conn.recv(1024)
             data = data.decode('utf-8')
-            print('Received', data)
+            print('Received:', data)
             conn.close()
             time.sleep(1)
 
@@ -49,7 +51,8 @@ class InfraServer(object):
         self.alert_id = None
         self.vid = None
         self.known = {}
-        self.peer = InfraPeer(PEER_PORT)
+        host = socket.gethostbyname(socket.gethostname())
+        self.peer = InfraPeer(host, INFRA_PORT)
 
     def __call__(self):
         """Implement inter-pod /sensor endpoint."""
