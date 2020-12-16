@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-import socket
+import random
 import selectors
+import socket
+import time
 import types
-import json
+
 
 class sensor:
     def __init__(self, host, port):
@@ -30,56 +32,72 @@ class sensor:
                                          out_bytes='')
             self.selector.register(sock, events, data=data)
 
-    def service_connection(self, key, mask):
+    def service_connection(self, key, mask,sensorType):
         sock = key.fileobj
         data = key.data
         if mask & selectors.EVENT_READ:
             recv_data = sock.recv(1024)
             if recv_data:
-                print('Received', repr(recv_data), 'from connection', data.conn_id)
+                #print('Received', repr(recv_data), 'from connection', data.conn_id)
                 data.recv_total += len(recv_data)
-            if not recv_data or data.recv_total == data.msg_total:
-                print('Closing connection #', data.conn_id)
-                self.finished = True
-                self.selector.unregister(sock)
-                sock.close()
+            #if not recv_data or data.recv_total == data.msg_total:
+             #   print('Closing connection #', data.conn_id)
+              #  self.finished = True
+               # self.selector.unregister(sock)
+                #sock.close()
         elif mask & selectors.EVENT_WRITE:
             if not data.out_bytes and data.messages:
                 data.out_bytes = data.messages.pop(0)
+                if sensorType == 'speed':
+                    d = sensorType + " " + str(random.randint(40, 90))
+                elif sensorType == 'proximity':
+                    d = sensorType + " " + str(random.randint(1, 50))
+                elif sensorType == 'pressure':
+                    d = sensorType + " " + str(random.randint(20, 40))
+                elif sensorType == 'heartrate':
+                    d = sensorType + " " + str(random.randint(40, 120))
+                data.messages.append(d.encode('utf-8'))
             if data.out_bytes:
-                print('Sending', repr(data.out_bytes), 'to connection', data.conn_id)
+                print(data.out_bytes.decode('utf-8'))
                 sent = sock.send(data.out_bytes)
                 data.out_bytes = data.out_bytes[sent:]
+                time.sleep(5)
         return self.finished
 
-    def run(self):
+    def run(self,sensorType):
         i = 0
         while self.finished == False:
             events = self.selector.select(timeout=None)
             for key, mask in events:
                 try:
-                    self.service_connection(key, mask)
+                    self.service_connection(key, mask,sensorType)
                 except ConnectionRefusedError:
-                    print('Host node with address {Host:', HOST, ', Port:', PORT, '} not found')
+                    print('Host node with address {Host:', self.host, ', Port:', self.port, '} not found')
                     break
                 i += 1
 
 
 def main():
-    HOST = '127.0.0.1'                          # The server's hostname or IP address
-    PORT_TABLE = {'VehiclePort': 33244}         # Hardcoded port table for testing
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sensortype', help='Type of sensor', required=True)
+    args = parser.parse_args()
+    sensorType = args.sensortype
+
+    PORT_TABLE = {'VehiclePort': 33401}         # Hardcoded port table for testing
     PORT = PORT_TABLE['VehiclePort']            # The port used by the server
 
-    byte_messages = ['Data 1'.encode('UTF-8'), 'Data 2'.encode('UTF-8'), 'Data 3'.encode('UTF-8')]
+    initial_message = sensorType + " 1"
+    byte_messages = [initial_message.encode('UTF-8')]
     # data = {}
     # data["key"] = "value"
     # json_data = json.dumps(data)
 
-    mySensor = sensor(HOST, PORT)
+    # The server's hostname or IP address
+    host = socket.gethostbyname(socket.gethostname())
+    mySensor = sensor(host, PORT)
     mySensor.start_connections(1, byte_messages)
-    mySensor.run()
+    mySensor.run(sensorType)
 
 
 if __name__ == '__main__':
     main()
-
