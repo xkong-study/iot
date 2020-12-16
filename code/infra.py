@@ -25,7 +25,6 @@ HOST_FMT = 'http://{pi}.berry.scss.tcd.ie'
 class InfraPeer(Peer):
     def __init__(self, *args):
         super().__init__(*args)
-        self.host = socket.gethostbyname(socket.gethostname())
         Thread(target=self.broadcastIP).start()
         Thread(target=self.receiveData).start()
         Thread(target=self.updatePeerList).start()
