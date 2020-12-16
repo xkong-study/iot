@@ -135,11 +135,11 @@ class Peer:
 
     def receiveData(self):
         """Listen on own port for other peer data."""
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind((self.host, self.port))
+        s.listen(5)
         while True:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind((self.host, self.port))
-            s.listen(5)
-            conn,addr = s.accept()
+            conn, _ = s.accept()
             data = conn.recv(1024)
             data = data.decode('utf-8')
             print(data)
