@@ -26,11 +26,11 @@ done
 . .venv/bin/activate
 if [ -z "${infra:-}" ]; then
   tmux new 'python code/peerTry.py'                                 \; \
-       splitw -h 'sleep 4; ./code/sensor.py --sensortype=speed'     \; \
+       splitw    'sleep 4; ./code/sensor.py --sensortype=speed'     \; \
        splitw    'sleep 4; ./code/sensor.py --sensortype=proximity' \; \
-       selectp -L                                                   \; \
-       splitw    'sleep 4; ./code/sensor.py --sensortype=heartrate' \; \
-       splitw    'sleep 4; ./code/sensor.py --sensortype=pressure'
+       splitw -h 'sleep 4; ./code/sensor.py --sensortype=heartrate' \; \
+       selectp -U                                                   \; \
+       splitw -h 'sleep 4; ./code/sensor.py --sensortype=pressure'
 else
   tmux new './code/infra.py'                                        \; \
        splitw -h 'python code/peerTry.py'                           \; \
