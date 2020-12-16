@@ -71,20 +71,16 @@ class InfraServer(object):
         }
 
     def pod_request(self, pi):
-        """Send a request to the given Pi."""
+        """Send a request to the given Pi.
+        Currently unused.
+        """
         host = HOST_FMT.format(pi=pi)
         url = f'{host}:{POD_PORT}{POD_ENDPOINT}'
         print('Fetching', url)
         r = requests.get(url)
         print('Status', r.status_code)
         if r.status_code == 200:
-            data = r.json()
-            known = {host: {} for host in data.pop('known', [])}
-            known.update(self.known)
-            print('Old known:', self.known)
-            self.known = known
-            self.known[pi] = data
-            print('New known:', self.known)
+            print('Text:', r.text)
 
 
 def main():
