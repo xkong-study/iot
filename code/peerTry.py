@@ -8,9 +8,9 @@ import types
 hostname = socket.gethostname()
 myhostname = socket.gethostbyname(hostname)
 
-port = 33301 #port which this instance will be listening on to other peers
-portForSensor = 33401 #port which this instance will be listening to sensors
-            
+PEER_PORT = 33301    # Port for listening to other peers
+SENSOR_PORT = 33401  # Port for listening to other sensors
+
 class Peer:
 
     def accept_wrapper(self,sock, selector):
@@ -62,8 +62,8 @@ class Peer:
     def listentosensor(self):
         selector = selectors.DefaultSelector()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind((myhostname, portForSensor))
-        print("Socket bound to Port for sensor: %s" %  portForSensor)
+        sock.bind((myhostname, SENSOR_PORT))
+        print("Socket bound to Port for sensor:", SENSOR_PORT)
         sock.listen()
         #print("Listening for connections...")
         sock.setblocking(False)
@@ -157,19 +157,21 @@ class Peer:
             conn.close()
             time.sleep(1)
 
-peer = Peer()
-t1 = threading.Thread(target = peer.broadcastIP,args = [port]) 
-t2 = threading.Thread(target = peer.updatePeerList)
-t3 = threading.Thread(target = peer.listentosensor)
-t4 = threading.Thread(target = peer.receiveData, args = [port])
-#t5 = threading.Thread(target = peer.activePeers)
-t1.start()
-t4.start()
-time.sleep(3)
-t2.start()
-#t5.start()
-t3.start()
+
+def main():
+    peer = Peer()
+    t1 = threading.Thread(target=peer.broadcastIP, args=[PEER_PORT])
+    t2 = threading.Thread(target=peer.updatePeerList)
+    t3 = threading.Thread(target=peer.listentosensor)
+    t4 = threading.Thread(target=peer.receiveData, args=[PEER_PORT])
+    #t5 = threading.Thread(target = peer.activePeers)
+    t1.start()
+    t4.start()
+    time.sleep(3)
+    t2.start()
+    #t5.start()
+    t3.start()
 
 
-        
-                           
+if __name__ == '__main__':
+    main()
