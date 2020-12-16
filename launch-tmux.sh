@@ -23,7 +23,18 @@ while getopts ih f; do
   esac
 done
 
-. .venv/bin/activate
+if [ ! -d .venv ]; then
+  echo 'No .venv directory found; creating'
+  python3 -m venv .venv
+  echo 'Activating .venv'
+  . .venv/bin/activate
+  echo 'Installing requirements in .venv'
+  pip3 install -r requirements.txt
+elif [ ! -x "$(command -v deactivate)" ]; then
+  echo 'Activating .venv'
+  . .venv/bin/activate
+fi
+
 if [ -z "${infra:-}" ]; then
   tmux new 'python code/peerTry.py'                                 \; \
        splitw    'sleep 4; ./code/sensor.py --sensortype=speed'     \; \
@@ -40,3 +51,6 @@ else
        splitw    'sleep 4; ./code/sensor.py --sensortype=heartrate' \; \
        splitw    'sleep 4; ./code/sensor.py --sensortype=pressure'
 fi
+
+echo 'Deactivating .venv'
+deactivate
