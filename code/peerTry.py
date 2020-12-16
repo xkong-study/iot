@@ -38,16 +38,16 @@ class Peer:
                     sensortype = data1.split(' ')[0]
                     if sensortype == 'speed':
                         if value >= 80 :
-                            self.sendData("overspeeding",'ALERT')
+                            self.sendData("is overspeeding",'ALERT')
                     elif sensortype == 'proximity':
                         if value <= 5 :
-                            self.sendData("closeby to you",'ALERT')
+                            self.sendData("is closeby to you",'ALERT')
                     elif sensortype == 'pressure':
                         if value <= 25 :
-                            self.sendData("Tyre issue",'ALERT')
+                            self.sendData("is having tyre issue",'ALERT')
                     elif sensortype == 'heartrate':
                         if value <= 60 or value>=100 :
-                            self.sendData("Heart rate ",'ALERT')
+                            self.sendData("passenger heart rate level low/high",'ALERT')
                 else:
                     print("Closing connection to: ", data.addr)
                     selector.unregister(sock)
@@ -108,44 +108,30 @@ class Peer:
                 peer = (host, port)
                 if peer != (self.host, self.port) and peer not in self.peers:
                     self.peers.add(peer)
-            print(self.peers)
+                    print('Known vehicles:', self.peers)
             time.sleep(10)
-
-    def activePeers(self):
-        """Check active peers."""
-        while True:
-            delset = set()
-            for peer in self.peers:
-                try:
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.connect(peer)
-                    s.send(str.encode("PING"))
-                    s.close()
-                except Exception:
-                    delset.add(peer)
-            for peer in delset:
-                print('Removing peer:', peer)
-                self.peers.discard(peer)
-            time.sleep(5)
 
     def sendData(self, data, command):
         """Send data to all peers."""
         delset = set()
+        sent = False
         if command == 'ALERT':
             for peer in self.peers:
                 try:
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.connect(peer)
-                    msg = f'ALERT from {self.host}, vehicle is {data}'
+                    msg = f'ALERT from {self.host}, vehicle {data}'
                     s.send(msg.encode())
-                    #print("Data sent to %s"%hostname)
+                    sent = True
                     s.close()
                 except Exception:
                     delset.add(peer)
         for peer in delset:
-            print('Removing peer:', peer)
             self.peers.discard(peer)
-        print("Data sent to known peers")
+            print('Vehicle removed due to inactivity:', peer)
+            print("Known vehicles:", self.peers)
+        if sent:
+            print("Alert sent to known vehicles")
 
     def receiveData(self):
         """Listen on own port for other peer data."""
@@ -156,8 +142,7 @@ class Peer:
             conn,addr = s.accept()
             data = conn.recv(1024)
             data = data.decode('utf-8')
-            if data!="PING":
-                print(data)
+            print(data)
             conn.close()
             time.sleep(1)
 
@@ -170,12 +155,10 @@ def main():
     t2 = threading.Thread(target=peer.updatePeerList)
     t3 = threading.Thread(target=peer.listentosensor)
     t4 = threading.Thread(target=peer.receiveData)
-    #t5 = threading.Thread(target = peer.activePeers)
     t1.start()
     t4.start()
     time.sleep(3)
     t2.start()
-    #t5.start()
     t3.start()
 
 
