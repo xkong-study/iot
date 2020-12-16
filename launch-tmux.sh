@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# launch-tmux.sh - run V2V, V2I, and sensors in multiple tmux panes
+# runme.sh - run V2V, V2I, and sensors in multiple tmux panes
 
 # Careful now
 set -o errexit
 set -o nounset
 
 usage() {
-  echo 'Usage: launch-tmux [-i] [-d DELAY]'
+  echo 'Usage: runme.sh [-i] [-d DELAY]'
   echo
   echo 'Run V2V, V2I, and sensors in multiple tmux panes.'
   echo

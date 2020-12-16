@@ -38,7 +38,7 @@ pods, although this functionality is currently not used.
 
 # Automation
 
-You're probably looking for the `launch-tmux.sh` convenience script, which
+You're probably looking for the `runme.sh` convenience script, which
 automatically activates a Python virtual environment, installs the
 aforementioned PyPI packages (running the script more than once should™ be
 idempotent in this regard), and proceeds with spawning several network nodes,
@@ -70,7 +70,7 @@ node:
 ----------------------------------------------
 ```
 
-The intention is that `launch-tmux.sh` is launched once on each Pi/host, but the
+The intention is that `runme.sh` is launched once on each Pi/host, but the
 script can be augmented to launch an abritrary number of sensors per host.
 
 To exit the script, just close `tmux`, e.g. by typing its prefix (`Ctrl+b` by
