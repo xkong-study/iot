@@ -49,10 +49,21 @@ if [ -z "${infra:-}" ]; then
   # No infrastructure node: just a vehicle and its trusty sensors
   tmux new './code/peerTry.py'                                             \; \
        splitw    "sleep ${delay}; ./code/sensor.py --sensortype=speed"     \; \
+       splitw -h   "sleep ${delay}; ./code/sensor.py --sensortype=longtitue" \; \
+       selectp -L                                                           \; \
+       splitw    "sleep ${delay}; ./code/sensor.py --sensortype=height"     \; \
+       selectp -R     \; \
        splitw    "sleep ${delay}; ./code/sensor.py --sensortype=proximity" \; \
+       selectp -R                      \; \
        splitw -h "sleep ${delay}; ./code/sensor.py --sensortype=heartrate" \; \
+       splitw -h   "sleep ${delay}; ./code/sensor.py --sensortype=latitue"     \; \
        selectp -U                                                          \; \
-       splitw -h "sleep ${delay}; ./code/sensor.py --sensortype=pressure"
+       splitw -h "sleep ${delay}; ./code/sensor.py --sensortype=pressure"  \; \
+       splitw -h "sleep ${delay}; ./code/sensor.py --sensortype=temperature"  \; \
+       selectp -U                                                          \; \
+       selectp-D                                                      \; \
+       splitw -h "sleep ${delay}; ./code/sensor.py --sensortype=height" \; \
+       selectp -U
 else
   # Infrastructure and vehicle
   tmux new './code/infra.py'                                               \; \

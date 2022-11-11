@@ -13,7 +13,12 @@ class Sensor:
     generators = {'speed': lambda: random.randint(40, 90),
                   'proximity': lambda: random.randint(1, 50),
                   'pressure': lambda: random.randint(20, 40),
-                  'heartrate': lambda: random.randint(40, 120)}
+                  'heartrate': lambda: random.randint(40, 120),
+                  'latitue': lambda: random.randint(40, 120),
+                  'longtitue': lambda: random.randint(40, 120),
+                  'height': lambda: random.randint(40, 120),
+                  'temperature': lambda: random.randint(40, 120),
+                  }
 
     def __init__(self, host, port):
         self.host = host
@@ -43,14 +48,8 @@ class Sensor:
         if mask & selectors.EVENT_READ:
             recv_data = sock.recv(1024)
             if recv_data:
-                # print('Received', repr(recv_data),
-                #       'from connection', data.conn_id)
+                print('Received', repr(recv_data),'from connection', data.conn_id)
                 data.recv_total += len(recv_data)
-            # if not recv_data or data.recv_total == data.msg_total:
-            #     print(f'Closing connection #{data.conn_id}')
-            #     self.finished = True
-            #     self.selector.unregister(sock)
-            #     sock.close()
         elif mask & selectors.EVENT_WRITE:
             if not data.out_bytes and data.messages:
                 data.out_bytes = data.messages.pop(0)

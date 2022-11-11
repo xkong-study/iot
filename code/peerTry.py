@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import selectors
 import socket
 import threading
@@ -60,7 +59,6 @@ class Peer:
 
         if mask & selectors.EVENT_WRITE:
             if data.out_bytes:
-                # print("Echoing", repr(data.out_bytes), "to", data.addr)
                 sent = sock.send(data.out_bytes)
                 data.out_bytes = data.out_bytes[sent:]
 
@@ -70,7 +68,7 @@ class Peer:
         sock.bind((self.host, SENSOR_PORT))
         print("Socket bound to Port for sensor:", SENSOR_PORT)
         sock.listen()
-        # print("Listening for connections...")
+        print("Listening for connections...")
         sock.setblocking(False)
         selector.register(sock, selectors.EVENT_READ, data=None)
         while True:
@@ -91,7 +89,7 @@ class Peer:
         message = f'HOST {self.host} PORT {self.port}'.encode('utf-8')
         while True:
             server.sendto(message, ('<broadcast>', BCAST_PORT))
-            # print("Host IP sent!")
+            print("Host IP sent!")
             time.sleep(10)
 
     def updatePeerList(self):
@@ -103,7 +101,7 @@ class Peer:
         client.bind(("", BCAST_PORT))
         while True:
             data, _ = client.recvfrom(1024)
-            # print("received message:", data)
+            print("received message:", data)
             data = data.decode('utf-8')
             dataMessage = data.split(' ')
             command = dataMessage[0]
